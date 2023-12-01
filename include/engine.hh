@@ -20,12 +20,11 @@
 
 # include <iostream>
 # include <fstream>
-# include <vector>
 # include <string.h>
 # include <string>
-# include "C:/Users/emilia/Desktop/fllib/include/flmath.h"
-# include "C:/Users/emilia/Desktop/fllib/include/flmem.h"
 # include "C:/Users/emilia/Desktop/fllib/include/flvector.hh"
+# include "C:/Users/emilia/Desktop/fllib/include/fllinear.hh"
+# include "C:/Users/emilia/Desktop/fllib/include/floctree.hh"
 
 enum engine_status {
 	st_menu = 1 << 0,
@@ -351,12 +350,10 @@ class Player {
 private:
 
 public:
-	Vector3 pos;
-	Vector3 vel;
-	Vector3 topos;
+	fl::vec3 pos;
+	fl::vec3 topos;
 	Camera3D cam;
 	Attribut attribut;
-	Vector3 orientation;
 	Inventory *inventory;
 	Model model;
 	bool isAlive;
@@ -369,11 +366,11 @@ public:
 
 	}
 
-	void update(double delta_time, std::vector<int> input_buffer, int *state, fl::vec<s_FadeTxt> *Fadetxt_list) {
+	void update(double delta_time, fl::vec<int> input_buffer, int *state, fl::vec<s_FadeTxt> *Fadetxt_list) {
 		static double acc_time = 0;
 		(void)input_buffer;
-		if (Vector3Distance(pos, topos) > 0.1f) {
-			pos = flTravel3d(pos, topos, attribut.speed * delta_time, delta_time);
+		if (fl::distance3(pos, topos) > 0.1f) {
+			pos = fl::travel3d(pos, topos, attribut.speed * delta_time, delta_time);
 		}
 		if (attribut.life < 0) {
 			attribut.life = 0;
@@ -394,11 +391,6 @@ public:
 
 	Player(void) {
 		pos = {
-			.x = 0,
-			.y = 0,
-			.z = 5,
-		};
-		vel = {
 			.x = 0,
 			.y = 0,
 			.z = 5,
