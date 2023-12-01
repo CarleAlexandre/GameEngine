@@ -1,0 +1,41 @@
+{"recipes": [{
+	"item": "axe",
+	"recipe": ["stone", 1, "wood", 1],
+	"tier": 1,
+	"quantity": 1,
+	"skill": "craftsmanship",
+	"xp": 100,
+	"minlevel": 5,
+	"type": "tool"
+},
+{
+	"item": "pickaxe",
+	"recipe": ["iron", 1, "wood", 1],
+	"tier": 1,
+	"quantity": 1,
+	"skill": "craftsmanship",
+	"xp": 200,
+	"minlevel": 7,
+	"type": "tool"
+},
+{
+	"item": "shovel",
+	"recipe": ["iron", 1, "wood", 1],
+	"tier": 2,
+	"quantity": 1,
+	"skill": "craftsmanship",
+	"xp": 300,
+	"minlevel": 7,
+	"type": "tool"
+},
+{
+	"item": "fatmeat",
+	"recipe": ["none"],
+	"tier": 10,
+	"quantity": 1,
+	"skill": "unknown",
+	"xp": 0,
+	"minlevel": 0,
+	"type": "divine"
+}
+]}
