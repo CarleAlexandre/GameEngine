@@ -56,13 +56,15 @@ typedef struct s_engine {
 	RenderTexture2D fbo;
 }	engine_t;
 
-typedef struct sv_player {
+typedef struct sv_player_s {
+	fl::vec3 pos;
+	fl::vec3 dir;
+}	sv_player_t;
 
-}	sv_player;
-
-typedef struct mv_player {
-
-}	mv_player;
+typedef struct mv_player_s {
+	fl::vec3 pos;
+	fl::vec3 dir;
+}	mv_player_t;
 
 typedef struct s_Button {
 	Rectangle bound;
@@ -155,6 +157,10 @@ RenderTexture2D LoadRenderTextureDepthTex(int width, int height);
 void UnloadRenderTextureDepthTex(RenderTexture2D target);
 //
 
+namespace fl {
+void updateCamera(Camera *camera, fl::vec3 player_pos, fl::vec3 player_dir);
+};
+
 class Loot {
 
 private:
@@ -216,12 +222,12 @@ class Inventory {
 		if (capacity <= static_cast<int>(store.size())) {
 			return (-1);
 		}
-		//for (i32 i = 0; i < inventory.size(); i++) {
-		//	if (inventory.at(i).id == item_id) {
-		//		inventory.at(i).stack_size += number;
-		//		return (0);
-		//	}
-		//}
+		for (int i = 0; i < store.size(); i++) {
+			if (store.at(i).id == item_id && store.at(i).stack_size < max_stack) {
+				store.at(i).stack_size += number;
+				return (0);
+			}
+		}
 		store.push_back({item_id, number, (unsigned int)store.size()});
 		return (0);
 	}
@@ -351,8 +357,7 @@ private:
 
 public:
 	fl::vec3 pos;
-	fl::vec3 topos;
-	Camera3D cam;
+	fl::vec3 dir;
 	Attribut attribut;
 	Inventory *inventory;
 	Model model;
@@ -368,10 +373,10 @@ public:
 
 	void update(double delta_time, fl::vec<int> input_buffer, int *state, fl::vec<s_FadeTxt> *Fadetxt_list) {
 		static double acc_time = 0;
-		(void)input_buffer;
-		if (fl::distance3(pos, topos) > 0.1f) {
-			pos = fl::travel3d(pos, topos, attribut.speed * delta_time, delta_time);
-		}
+		//(void)input_buffer;
+		//if (fl::distance3(pos, topos) > 0.1f) {
+		//	pos = fl::travel3d(pos, topos, attribut.speed * delta_time, delta_time);
+		//}
 		if (attribut.life < 0) {
 			attribut.life = 0;
 			*state = st_gameover;
@@ -395,29 +400,10 @@ public:
 			.y = 0,
 			.z = 5,
 		};
-		topos = {
+		dir = {
 			.x = 0,
 			.y = 0,
-			.z = 0,
-		};
-		cam = (Camera3D){
-			.position = {
-				.x = 2,
-				.y = -3,
-				.z = 10,
-			},
-			.target = {
-				.x = 0,
-				.y = 0,
-				.z = 0
-			},
-			.up = {
-				.x = 0,
-				.y = 1.0f,
-				.z = 0,
-			},
-			.fovy = 45.0f,
-			.projection = CAMERA_PERSPECTIVE,
+			.z = 1,
 		};
 		attribut = {
 			.speed = 100.,

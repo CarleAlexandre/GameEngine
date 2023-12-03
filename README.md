@@ -71,3 +71,8 @@ i need to find another approach (even if gpu can handle it)
 ___
 
 raycast into the octree to see if a block is seen, and stop looking when a cub is hitten, the bigger the distance, the less we look at child
+
+___
+
+for rendering, i will use raytracing / raycasting for each pixel of the screen;
+i will put the scene in an octree, cast raytracing in it from the camera for each pixel and if it travel through a leave of the octree it will put the data of it into the render

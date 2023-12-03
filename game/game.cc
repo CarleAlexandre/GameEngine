@@ -25,10 +25,20 @@ unloadAllButton(fl::vec<Button> *button_menu, fl::vec<Button> *button_setting, f
 	}
 }
 
+sv_player_t initPlayer() {
+	sv_player_t sv_player;
+
+	sv_player.dir = {0, 0, 1};
+	sv_player.pos = {0, 0, 0};
+	return (sv_player);
+}
+
 int
 main(void) {
 	display_t display;
 	engine_t engine;
+	sv_player_t sv_player;
+	//mv_player mplayer[16];
 	fl::vec<Button> button_menu;
 	bool window_close = false;
 
@@ -44,14 +54,14 @@ main(void) {
 	display.icon = LoadImage("assets/icon.png");
 	SetWindowIcon(display.icon);
 
-	Camera camera = { 0 };
-    camera.position = (Vector3){ 2.0f, 4.0f, 6.0f };    // Camera position
-    camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };      // Camera looking at point
-    camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };          // Camera up vector (rotation towards target)
-    camera.fovy = 45.0f;                                // Camera field-of-view Y
-    camera.projection = CAMERA_PERSPECTIVE;             // Camera projection type
-	SetCameraMode(camera, CAMERA_FREE);
+	sv_player = initPlayer();
 
+	Camera camera = { 0 };
+    camera.position = (Vector3){ 2.0f, 4.0f, 6.0f };
+    camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
+    camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
+    camera.fovy = 45.0f;
+    camera.projection = CAMERA_PERSPECTIVE;
 
 	engine.shader = LoadShader("assets/shader/shader.vs", "assets/shader/shader.fs");
 	engine.shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(engine.shader, "viewPos");
@@ -78,6 +88,8 @@ main(void) {
 	while ((engine.status & st_close) == 0) {
 		double delta_time = GetFrameTime();
 		Vector2 mouse_pos = GetMousePosition();
+		Vector2 mouse_delta = GetMouseDelta();
+		GetMouseRay(mouse_pos, camera);
 		if (IsKeyPressed(KEY_ESCAPE)) {
 			window_close = true;
 		}
@@ -104,7 +116,10 @@ main(void) {
 		if (engine.status & st_game) {
 			//things to do, add a zbuffer g_buffer
 			// draw outline of object;
-			UpdateCamera(&camera);
+			if (IsKeyPressed(KEY_W)) {
+				fl::vec3add(sv_player.pos, sv_player.dir);
+			}
+			fl::updateCamera(&camera, sv_player.pos, sv_player.dir);
 			UpdateLightValues(engine.shader, light);
 			SetShaderValue(engine.shader, engine.shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position, SHADER_UNIFORM_VEC3);
 			SetShaderValue(engine.fbo_shader, engine.fbo_shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position, SHADER_UNIFORM_VEC3);
@@ -114,7 +129,6 @@ main(void) {
 				ClearBackground(WHITE);
 				rlEnableDepthTest();
 				BeginMode3D(camera);
-
 				//BeginShaderMode(engine.depth_shader);
 					for (float i = 0; i < 10; i+=1) {
 						for (float j = 0; j < 10; j+=1) {
@@ -127,7 +141,6 @@ main(void) {
 						}
 					}
 				//EndShaderMode();
-
 				EndMode3D();
 			EndTextureMode();
 		}
