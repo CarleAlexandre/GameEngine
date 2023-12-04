@@ -28,8 +28,9 @@ unloadAllButton(fl::vec<Button> *button_menu, fl::vec<Button> *button_setting, f
 sv_player_t initPlayer() {
 	sv_player_t sv_player;
 
-	sv_player.dir = {0, 0, 1};
-	sv_player.pos = {0, 0, 0};
+	sv_player.dir = {0};
+	sv_player.pos = {0};
+	sv_player.topos = {0};
 	return (sv_player);
 }
 
@@ -38,29 +39,31 @@ main(void) {
 	display_t display;
 	engine_t engine;
 	sv_player_t sv_player;
+	float sv_player_speed = 0.1f;
 	//mv_player mplayer[16];
 	fl::vec<Button> button_menu;
 	bool window_close = false;
+	float wait_time_print = 0;
+	float sv_zoom = 0;
 
 	engine.status = st_menu;
 	display.width = 720;
 	display.height = 480;
 	display.fullscreen = false;
-	display.configflag = FLAG_MSAA_4X_HINT;
+	display.configflag = FLAG_MSAA_4X_HINT | FLAG_BORDERLESS_WINDOWED_MODE;
 	display.title = static_cast<char *>(flMemDup("engine\0", 8, malloc));
 	SetConfigFlags(display.configflag);
 	InitWindow(display.width, display.height, display.title);
 	engine.font = LoadFont("assets/font/menu_font.ttf");
 	display.icon = LoadImage("assets/icon.png");
 	SetWindowIcon(display.icon);
-
 	sv_player = initPlayer();
 
-	Camera camera = { 0 };
-    camera.position = (Vector3){ 2.0f, 4.0f, 6.0f };
-    camera.target = (Vector3){ 0.0f, 0.0f, 0.0f };
+    Camera camera = { 0 };
+    camera.position = (Vector3){ 0.0f, 1.0f, 2.0f };
+    camera.target = (Vector3){ 0.0f, 1.0f, 0.0f };
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
-    camera.fovy = 45.0f;
+    camera.fovy = 60.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
 	engine.shader = LoadShader("assets/shader/shader.vs", "assets/shader/shader.fs");
@@ -88,7 +91,7 @@ main(void) {
 	while ((engine.status & st_close) == 0) {
 		double delta_time = GetFrameTime();
 		Vector2 mouse_pos = GetMousePosition();
-		Vector2 mouse_delta = GetMouseDelta();
+
 		GetMouseRay(mouse_pos, camera);
 		if (IsKeyPressed(KEY_ESCAPE)) {
 			window_close = true;
@@ -114,12 +117,30 @@ main(void) {
 		}
 # endif
 		if (engine.status & st_game) {
-			//things to do, add a zbuffer g_buffer
-			// draw outline of object;
-			if (IsKeyPressed(KEY_W)) {
-				fl::vec3add(sv_player.pos, sv_player.dir);
+			Vector2 mouse_delta = GetMouseDelta();
+
+			UpdateCameraPro(&camera, fl::vec3to(sv_player.topos),{ mouse_delta.x*0.05f, mouse_delta.y*0.05f, 0.0f}, sv_zoom);
+			sv_player.topos = {};
+			sv_player.dir = fl::tovec3(Vector3Subtract(camera.position, camera.target));
+			sv_player.pos = fl::tovec3(camera.position);
+
+			if (IsKeyDown(KEY_W)) {
+				sv_player.topos.x += 0.1f;
 			}
-			fl::updateCamera(&camera, sv_player.pos, sv_player.dir);
+			if (IsKeyDown(KEY_S)) {
+				sv_player.topos.x -= 0.1f;
+			}
+			if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) {
+				sv_zoom = -2;
+			}
+			if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON)) {
+				sv_zoom = 2;
+			} else if (IsMouseButtonUp(MOUSE_RIGHT_BUTTON)) {
+				sv_zoom = 0;
+			}
+
+			SetMousePosition(display.width * 0.5, display.height * 0.5);
+
 			UpdateLightValues(engine.shader, light);
 			SetShaderValue(engine.shader, engine.shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position, SHADER_UNIFORM_VEC3);
 			SetShaderValue(engine.fbo_shader, engine.fbo_shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position, SHADER_UNIFORM_VEC3);
@@ -129,7 +150,6 @@ main(void) {
 				ClearBackground(WHITE);
 				rlEnableDepthTest();
 				BeginMode3D(camera);
-				//BeginShaderMode(engine.depth_shader);
 					for (float i = 0; i < 10; i+=1) {
 						for (float j = 0; j < 10; j+=1) {
 							DrawVoxel(voxel_dirt->model, {i, 0, j}, 1, RED);
@@ -140,13 +160,22 @@ main(void) {
 							DrawVoxel(voxel_dirt->model, {i, 0, j}, 1, BLUE);
 						}
 					}
-				//EndShaderMode();
+					DrawLine3D({-100, 0,}, {100, 0, 0}, RED);
+					DrawLine3D({0,-100,0}, {0, 100, 0}, GREEN);
+					DrawLine3D({0,0,-100}, {0, 0, 100}, BLUE);
+					//DrawSphere(vec3to(sv_player.pos), 2, PINK);
+					DrawLine3D(vec3to(sv_player.pos), vec3to(vec3add(sv_player.dir, sv_player.pos)), BLACK);
 				EndMode3D();
 			EndTextureMode();
 		}
 			ClearBackground(BLACK);
 			if (engine.status & st_game) {
-				DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
+				//BeginShaderMode(engine.fbo_shader);
+					DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
+				//EndShaderMode();
+				//BeginBlendMode(BLEND_ADDITIVE);
+				//	DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
+				//EndBlendMode();
 			}
 # ifdef DEBUG_CONSOLE_USE
 			if (engine.status & st_debug) {
@@ -171,5 +200,6 @@ main(void) {
 	UnloadTextureAtlas(engine.textures);
 	UnloadShader(engine.fbo_shader);
 	UnloadFont(engine.font);
+	ShowCursor();
 	return (0);
 }

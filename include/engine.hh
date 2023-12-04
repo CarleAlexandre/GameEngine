@@ -7,6 +7,8 @@
 #  include <C:/mingw64/include/rlgl.h>
 #  define RLIGHTS_IMPLEMENTATION
 #  include "rlights.h"
+#  define RCAMERA_IMPLEMENTATION
+#  include <C:/mingw64/include/rcamera.h>
 #  define GLSL_VERSION 330
 # else
 #  include <raylib.h>
@@ -14,6 +16,8 @@
 #  include <rlgl.h>
 #  define RLIGHTS_IMPLEMENTATION
 #  include "rlights.h"
+#  define RCAMERA_IMPLEMENTATION
+#  include <rcamera.h>
 #  define GLSL_VERSION 330
 #  include <cstring>
 # endif
@@ -22,9 +26,9 @@
 # include <fstream>
 # include <string.h>
 # include <string>
-# include "C:/Users/emilia/Desktop/fllib/include/flvector.hh"
-# include "C:/Users/emilia/Desktop/fllib/include/fllinear.hh"
-# include "C:/Users/emilia/Desktop/fllib/include/floctree.hh"
+# include "../../fllib/include/flvector.hh"
+# include "../../fllib/include/fllinear.hh"
+# include "../../fllib/include/floctree.hh"
 
 enum engine_status {
 	st_menu = 1 << 0,
@@ -59,6 +63,7 @@ typedef struct s_engine {
 typedef struct sv_player_s {
 	fl::vec3 pos;
 	fl::vec3 dir;
+	fl::vec3 topos;
 }	sv_player_t;
 
 typedef struct mv_player_s {
@@ -158,7 +163,15 @@ void UnloadRenderTextureDepthTex(RenderTexture2D target);
 //
 
 namespace fl {
-void updateCamera(Camera *camera, fl::vec3 player_pos, fl::vec3 player_dir);
+
+inline Vector3 vec3to(vec3 v) {
+	return((Vector3){v.x, v.y, v.z});
+}
+
+inline vec3 tovec3(Vector3 v) {
+	return((vec3){v.x, v.y, v.z});
+}
+
 };
 
 class Loot {

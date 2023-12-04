@@ -8,6 +8,7 @@ void *dummy_function(engine_t *arg) {
 void *solo_engine(engine_t *engine) {
 	if (!(engine->status & st_game)) {
 		engine->status ^= st_game;
+		HideCursor();
 		engine->status ^= st_menu;
 	}
 	return (0x00);

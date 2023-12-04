@@ -8,14 +8,14 @@ void addFadingTxt(std::string text, double delay, Color color, int font_size, Ve
 		.delay = delay,
 		.time = 0.0f,
 		.alpha = 1.0f,
-		.font_size()= font_size,
+		.font_size = font_size,
 	});
 }
 
 void renderFadingTxt(double delta_time, fl::vec<s_FadeTxt> *Fadetxt_list) {
 	if (Fadetxt_list->size()== 0)
 		return;
-	for (uint32_t i = 0; i < Fadetxt_list->size; i++) {
+	for (uint32_t i = 0; i < Fadetxt_list->size(); i++) {
 		if (Fadetxt_list->at(i).time >= Fadetxt_list->at(i).delay) {
 			Fadetxt_list->erase(i);
 			return;

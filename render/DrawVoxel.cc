@@ -27,4 +27,5 @@ void DrawVoxel(Model voxel, Vector3 pos, float size, Color color) {
 	//blend all of them together;
 	//apply shadow and light on the scene from the light data and the buffer data;
 	//render the buffer
+	DrawModel(voxel, pos, size, color);
 }
