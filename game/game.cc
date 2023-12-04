@@ -28,9 +28,10 @@ unloadAllButton(fl::vec<Button> *button_menu, fl::vec<Button> *button_setting, f
 sv_player_t initPlayer() {
 	sv_player_t sv_player;
 
-	sv_player.dir = {0};
-	sv_player.pos = {0};
-	sv_player.topos = {0};
+	sv_player = {};
+	sv_player.mass = 10;
+	sv_player.pos = { 0.0f, 1.0f, 2.0f };
+	sv_player.vel = {0.0f, 0.0f, 0.0f};
 	return (sv_player);
 }
 
@@ -44,7 +45,14 @@ main(void) {
 	fl::vec<Button> button_menu;
 	bool window_close = false;
 	float wait_time_print = 0;
-	float sv_zoom = 0;
+	float sv_friction = 10000;
+	float sv_restitution = 100;
+	fl::vec3 sv_gravity = {0, 0.1f, 0};
+	bool lockView = true;
+	bool rotateAroundTarget = false;
+	bool rotateUp = false;
+	bool moveInWorldPlane = true;
+	float sv_sensibility = 0.05f;
 
 	engine.status = st_menu;
 	display.width = 720;
@@ -60,8 +68,8 @@ main(void) {
 	sv_player = initPlayer();
 
     Camera camera = { 0 };
-    camera.position = (Vector3){ 0.0f, 1.0f, 2.0f };
-    camera.target = (Vector3){ 0.0f, 1.0f, 0.0f };
+    camera.position = (Vector3){ 0.0f, 1.0f, 0.0f };
+    camera.target = (Vector3){ 1.0f, 1.0f, 0.0f };
     camera.up = (Vector3){ 0.0f, 1.0f, 0.0f };
     camera.fovy = 60.0f;
     camera.projection = CAMERA_PERSPECTIVE;
@@ -72,7 +80,6 @@ main(void) {
     SetShaderValue(engine.shader, GetShaderLocation(engine.shader, "ambient"), shaderposlocaltmp, SHADER_UNIFORM_VEC4);
 
 	engine.fbo_shader = LoadShader(0, "assets/shader/sobel_filter.fs");
-	engine.depth_shader = LoadShader(0, "assets/shader/depth_filter.fs");
 
 	Light light = CreateLight(LIGHT_POINT, {10, 10, 15}, Vector3Zero(), WHITE, engine.shader);
 
@@ -91,8 +98,6 @@ main(void) {
 	while ((engine.status & st_close) == 0) {
 		double delta_time = GetFrameTime();
 		Vector2 mouse_pos = GetMousePosition();
-
-		GetMouseRay(mouse_pos, camera);
 		if (IsKeyPressed(KEY_ESCAPE)) {
 			window_close = true;
 		}
@@ -118,33 +123,39 @@ main(void) {
 # endif
 		if (engine.status & st_game) {
 			Vector2 mouse_delta = GetMouseDelta();
+			SetMousePosition(display.width * 0.5, display.height * 0.5);
 
-			UpdateCameraPro(&camera, fl::vec3to(sv_player.topos),{ mouse_delta.x*0.05f, mouse_delta.y*0.05f, 0.0f}, sv_zoom);
-			sv_player.topos = {};
-			sv_player.dir = fl::tovec3(Vector3Subtract(camera.position, camera.target));
-			sv_player.pos = fl::tovec3(camera.position);
+			sv_player.dir = 
 
 			if (IsKeyDown(KEY_W)) {
-				sv_player.topos.x += 0.1f;
+				addImpulse(sv_player.accel, sv_player.dir, sv_player.mass);
 			}
-			if (IsKeyDown(KEY_S)) {
-				sv_player.topos.x -= 0.1f;
-			}
-			if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON)) {
-				sv_zoom = -2;
-			}
-			if (IsMouseButtonReleased(MOUSE_RIGHT_BUTTON)) {
-				sv_zoom = 2;
-			} else if (IsMouseButtonUp(MOUSE_RIGHT_BUTTON)) {
-				sv_zoom = 0;
-			}
+			//if (IsKeyDown(KEY_S)) {
+			//	addImpulse(sv_player.accel, sv_player.dir, sv_player.mass);
+			//}
 
-			SetMousePosition(display.width * 0.5, display.height * 0.5);
+			//applyGravity(sv_player.accel, sv_gravity, sv_player.mass);
+			sv_player.vel = resolveAccel(sv_player.vel, sv_player.accel, sv_player.mass, delta_time);
+			applyFriction(sv_player.accel, sv_friction);
+
+			// Camera rotation
+			CameraPitch(&camera, -mouse_delta.y * sv_sensibility * DEG2RAD, lockView, rotateAroundTarget, rotateUp);
+			CameraYaw(&camera, -mouse_delta.x * sv_sensibility * DEG2RAD, rotateAroundTarget);
+
+			// Camera movement
+			CameraMoveForward(&camera, sv_player.vel.x * delta_time, moveInWorldPlane);
+			CameraMoveRight(&camera, sv_player.vel.z * delta_time, moveInWorldPlane);
+			//CameraMoveUp(&camera, sv_player.vel.y * delta_time);
+
+			sv_player.pos = fl::tovec3(camera.position);
+
+			// Zoom target distance
+			//CameraMoveToTarget(camera, 0);
+
 
 			UpdateLightValues(engine.shader, light);
 			SetShaderValue(engine.shader, engine.shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position, SHADER_UNIFORM_VEC3);
 			SetShaderValue(engine.fbo_shader, engine.fbo_shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position, SHADER_UNIFORM_VEC3);
-			SetShaderValue(engine.depth_shader, engine.depth_shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position, SHADER_UNIFORM_VEC3);
 
 			BeginTextureMode(engine.fbo);
 				ClearBackground(WHITE);
@@ -163,8 +174,7 @@ main(void) {
 					DrawLine3D({-100, 0,}, {100, 0, 0}, RED);
 					DrawLine3D({0,-100,0}, {0, 100, 0}, GREEN);
 					DrawLine3D({0,0,-100}, {0, 0, 100}, BLUE);
-					//DrawSphere(vec3to(sv_player.pos), 2, PINK);
-					DrawLine3D(vec3to(sv_player.pos), vec3to(vec3add(sv_player.dir, sv_player.pos)), BLACK);
+					DrawLine3D(camera.position, camera.target, PINK);
 				EndMode3D();
 			EndTextureMode();
 		}
@@ -176,6 +186,10 @@ main(void) {
 				//BeginBlendMode(BLEND_ADDITIVE);
 				//	DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
 				//EndBlendMode();
+				DrawRectangle(0, 0, 100, 100, BLACK);
+				DrawLine(50, 0, 50, 100, BLUE);
+				DrawLine(0, 50, 100, 50, RED);
+				DrawLine(50, 50, 25 * sv_player.vel.x + 50, 25 * sv_player.vel.z + 50, WHITE);
 			}
 # ifdef DEBUG_CONSOLE_USE
 			if (engine.status & st_debug) {
@@ -188,6 +202,7 @@ main(void) {
 			if (window_close == true) {
 				DrawRectangle(10, display.height * 0.5 - 100, display.width, 200, BLACK);
 				DrawTextEx(engine.font, "Are you sure you want to exit program? [Y/N]", (Vector2){50, static_cast<float>(display.height * 0.5 - 20)}, 24, 0, GREEN);
+
 			}
 		EndDrawing();
 	}

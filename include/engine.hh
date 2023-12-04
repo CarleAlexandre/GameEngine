@@ -55,7 +55,6 @@ typedef struct s_engine {
 	fl::vec<Texture> textures;
 	Font font;
 	Shader fbo_shader;
-	Shader depth_shader;
 	Shader shader;
 	RenderTexture2D fbo;
 }	engine_t;
@@ -63,7 +62,10 @@ typedef struct s_engine {
 typedef struct sv_player_s {
 	fl::vec3 pos;
 	fl::vec3 dir;
-	fl::vec3 topos;
+	fl::vec3 topos;//used to resolve collision
+	fl::vec3 accel;
+	fl::vec3 vel;
+	float mass;
 }	sv_player_t;
 
 typedef struct mv_player_s {
@@ -156,6 +158,13 @@ void renderFadingTxt(double delta_time, fl::vec<s_FadeTxt> *Fadetxt_list);
 void DrawVoxel(Model voxel, Vector3 pos, float size, Color color);
 void unloadVoxel(Voxel *voxel);
 Voxel *loadVoxel(Shader voxel_shader);
+
+fl::vec3 resolveAccel(fl::vec3 &velocity, fl::vec3 &acceleration, float mass, float deltaTime);
+void addImpulse(fl::vec3 &acceleration, const fl::vec3 &impulse, float mass);
+
+void applyFriction(fl::vec3 &acceleration, float frictionFactor);
+void applyRestitution(fl::vec3 &velocity, float restitutionFactor);
+void applyGravity(fl::vec3 &acceleration, const fl::vec3 &gravity, float mass);
 
 //test under
 RenderTexture2D LoadRenderTextureDepthTex(int width, int height);

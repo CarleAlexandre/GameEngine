@@ -19,6 +19,7 @@ SRC		+=	$(wildcard render/*.cc)
 SRC		+=	$(wildcard ui/*.cc)
 SRC		+=	$(wildcard io/*.cc)
 SRC		+=	$(wildcard game/*.cc)
+SRC		+=	$(wildcard physic/*.cc)
 
 SERVER_SRC	+=	source/server.cpp
 
