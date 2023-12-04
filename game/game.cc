@@ -32,7 +32,16 @@ sv_player_t initPlayer() {
 	sv_player.mass = 10;
 	sv_player.pos = { 0.0f, 1.0f, 2.0f };
 	sv_player.vel = {0.0f, 0.0f, 0.0f};
+	sv_player.airborn = false;
+	sv_player.jumpforce = 2000;
+	sv_player.speed = 100;
 	return (sv_player);
+}
+
+Quaternion rotateYawPitch(Vector3 axis, float angleYaw, float anglePitch) {
+    Quaternion qYaw = QuaternionFromAxisAngle((Vector3){0, 1, 0}, angleYaw);
+    Quaternion qPitch = QuaternionFromAxisAngle(axis, anglePitch);
+    return QuaternionMultiply(qPitch, qYaw);
 }
 
 int
@@ -40,19 +49,16 @@ main(void) {
 	display_t display;
 	engine_t engine;
 	sv_player_t sv_player;
-	float sv_player_speed = 0.1f;
 	//mv_player mplayer[16];
 	fl::vec<Button> button_menu;
 	bool window_close = false;
-	float wait_time_print = 0;
-	float sv_friction = 10000;
-	float sv_restitution = 100;
-	fl::vec3 sv_gravity = {0, 0.1f, 0};
-	bool lockView = true;
-	bool rotateAroundTarget = false;
-	bool rotateUp = false;
-	bool moveInWorldPlane = true;
-	float sv_sensibility = 0.05f;
+
+	float sv_player_speed = 10.0f;
+	float sv_friction = 20000;
+	float sv_airborn_friction = 10000;
+	float sv_restitution = 10;
+	fl::vec3 sv_gravity = {0, -1.0f, 0};
+	float sv_sensibility = 0.3f;
 
 	engine.status = st_menu;
 	display.width = 720;
@@ -125,33 +131,56 @@ main(void) {
 			Vector2 mouse_delta = GetMouseDelta();
 			SetMousePosition(display.width * 0.5, display.height * 0.5);
 
-			sv_player.dir = 
+			sv_player.forward = fl::tovec3(GetCameraForward(&camera));
+			sv_player.right = fl::tovec3(GetCameraRight(&camera));
 
 			if (IsKeyDown(KEY_W)) {
-				addImpulse(sv_player.accel, sv_player.dir, sv_player.mass);
+				addImpulse(sv_player.accel, sv_player.forward, sv_player.mass, sv_player.speed);
 			}
-			//if (IsKeyDown(KEY_S)) {
-			//	addImpulse(sv_player.accel, sv_player.dir, sv_player.mass);
-			//}
+			if (IsKeyDown(KEY_S)) {
+				addImpulse(sv_player.accel, fl::vec3neg(sv_player.forward), sv_player.mass, sv_player.speed);
+			}
+			if (IsKeyDown(KEY_D)) {
+				addImpulse(sv_player.accel, sv_player.right, sv_player.mass, sv_player.speed);
+			}
+			if (IsKeyDown(KEY_A)) {
+				addImpulse(sv_player.accel, fl::vec3neg(sv_player.right), sv_player.mass, sv_player.speed);
+			}
+			if (IsKeyPressed(KEY_SPACE) && sv_player.pos.y <= 1) {
+				addImpulse(sv_player.accel, {0.0f, sv_player.jumpforce, 0.0f}, sv_player.mass, 1);
+				sv_player.airborn = true;
+			}
+			if (IsKeyDown(KEY_C)) {
+				sv_player.sliding = true;
+			} else if (sv_player.sliding == true) {
+				sv_player.sliding = false;
+			}
 
-			//applyGravity(sv_player.accel, sv_gravity, sv_player.mass);
+			applyGravity(sv_player.accel, sv_gravity, sv_player.mass);
 			sv_player.vel = resolveAccel(sv_player.vel, sv_player.accel, sv_player.mass, delta_time);
-			applyFriction(sv_player.accel, sv_friction);
+			if (sv_player.airborn == true) {
+				applyFriction(sv_player.accel, sv_airborn_friction);
+			} else {
+				applyFriction(sv_player.accel, sv_friction);
+			}
 
-			// Camera rotation
-			CameraPitch(&camera, -mouse_delta.y * sv_sensibility * DEG2RAD, lockView, rotateAroundTarget, rotateUp);
-			CameraYaw(&camera, -mouse_delta.x * sv_sensibility * DEG2RAD, rotateAroundTarget);
+			fl::vec3 step = {sv_player.vel.x * (float)delta_time, sv_player.vel.y * (float)delta_time, sv_player.vel.z * (float)delta_time};
 
-			// Camera movement
-			CameraMoveForward(&camera, sv_player.vel.x * delta_time, moveInWorldPlane);
-			CameraMoveRight(&camera, sv_player.vel.z * delta_time, moveInWorldPlane);
-			//CameraMoveUp(&camera, sv_player.vel.y * delta_time);
+			if (sv_player.airborn == false && sv_player.sliding == false) {
+				sv_player.vel = {0};
+			}
 
-			sv_player.pos = fl::tovec3(camera.position);
+			if (sv_player.pos.y <= 0 && step.y <= 0) {
+				step.y = 0;
+				sv_player.airborn = false;
+			}
 
-			// Zoom target distance
-			//CameraMoveToTarget(camera, 0);
+			sv_player.pos = fl::vec3add(sv_player.pos, step);
+			camera.target = Vector3Add(camera.target, fl::vec3to(step));
+			camera.position = fl::vec3to(sv_player.pos);
 
+			camera.target = fl::vec3to(fl::rotateYaw(fl::tovec3(camera.target), sv_player.pos, mouse_delta.x * sv_sensibility * DEG2RAD));
+			CameraPitch(&camera, -mouse_delta.y * sv_sensibility * DEG2RAD, true, false, false);
 
 			UpdateLightValues(engine.shader, light);
 			SetShaderValue(engine.shader, engine.shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position, SHADER_UNIFORM_VEC3);
@@ -189,7 +218,7 @@ main(void) {
 				DrawRectangle(0, 0, 100, 100, BLACK);
 				DrawLine(50, 0, 50, 100, BLUE);
 				DrawLine(0, 50, 100, 50, RED);
-				DrawLine(50, 50, 25 * sv_player.vel.x + 50, 25 * sv_player.vel.z + 50, WHITE);
+				DrawLine(50, 50, sv_player.vel.x + 50, sv_player.vel.z + 50, WHITE);
 			}
 # ifdef DEBUG_CONSOLE_USE
 			if (engine.status & st_debug) {

@@ -65,7 +65,13 @@ typedef struct sv_player_s {
 	fl::vec3 topos;//used to resolve collision
 	fl::vec3 accel;
 	fl::vec3 vel;
+	fl::vec3 forward;
+	fl::vec3 right;
+	bool airborn;
+	float speed;
 	float mass;
+	float jumpforce;
+	bool sliding;
 }	sv_player_t;
 
 typedef struct mv_player_s {
@@ -160,7 +166,7 @@ void unloadVoxel(Voxel *voxel);
 Voxel *loadVoxel(Shader voxel_shader);
 
 fl::vec3 resolveAccel(fl::vec3 &velocity, fl::vec3 &acceleration, float mass, float deltaTime);
-void addImpulse(fl::vec3 &acceleration, const fl::vec3 &impulse, float mass);
+void addImpulse(fl::vec3 &acceleration, const fl::vec3 &impulse, float mass, float speed);
 
 void applyFriction(fl::vec3 &acceleration, float frictionFactor);
 void applyRestitution(fl::vec3 &velocity, float restitutionFactor);
