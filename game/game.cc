@@ -33,7 +33,7 @@ sv_player_t initPlayer() {
 	sv_player.pos = { 0.0f, 1.0f, 2.0f };
 	sv_player.vel = {0.0f, 0.0f, 0.0f};
 	sv_player.airborn = false;
-	sv_player.jumpforce = 2000;
+	sv_player.jumpforce = 30;
 	sv_player.speed = 100;
 	return (sv_player);
 }
@@ -53,11 +53,10 @@ main(void) {
 	fl::vec<Button> button_menu;
 	bool window_close = false;
 
-	float sv_player_speed = 10.0f;
-	float sv_friction = 20000;
-	float sv_airborn_friction = 10000;
+	float sv_friction = 0.6;
+	float sv_airborn_friction = 0.02;
 	float sv_restitution = 10;
-	fl::vec3 sv_gravity = {0, -1.0f, 0};
+	fl::vec3 sv_gravity = {0, -0.2f, 0};
 	float sv_sensibility = 0.3f;
 
 	engine.status = st_menu;
@@ -99,7 +98,7 @@ main(void) {
 	LoadTextureAtlas(&engine.textures);
 	loadAllButton(&button_menu, NULL, NULL);
 
-	SetTargetFPS(60);
+	SetTargetFPS(120);
 
 	while ((engine.status & st_close) == 0) {
 		double delta_time = GetFrameTime();
@@ -147,10 +146,13 @@ main(void) {
 				addImpulse(sv_player.accel, fl::vec3neg(sv_player.right), sv_player.mass, sv_player.speed);
 			}
 			if (IsKeyPressed(KEY_SPACE) && sv_player.pos.y <= 1) {
-				addImpulse(sv_player.accel, {0.0f, sv_player.jumpforce, 0.0f}, sv_player.mass, 1);
+				addImpulse(sv_player.accel, {0.0f, sv_player.jumpforce, 0.0f}, sv_player.mass, sv_player.speed);
 				sv_player.airborn = true;
 			}
 			if (IsKeyDown(KEY_C)) {
+				if (sv_player.pos.y <= 0.1 && sv_player.airborn) {
+					addImpulse(sv_player.accel, {sv_player.forward.x * 3, 0, sv_player.forward.z * 3}, sv_player.mass, sv_player.speed);
+				}
 				sv_player.sliding = true;
 			} else if (sv_player.sliding == true) {
 				sv_player.sliding = false;
@@ -158,17 +160,13 @@ main(void) {
 
 			applyGravity(sv_player.accel, sv_gravity, sv_player.mass);
 			sv_player.vel = resolveAccel(sv_player.vel, sv_player.accel, sv_player.mass, delta_time);
-			if (sv_player.airborn == true) {
-				applyFriction(sv_player.accel, sv_airborn_friction);
+			if (sv_player.airborn == true || sv_player.sliding == true) {
+				applyFriction(sv_player.vel, sv_airborn_friction);
 			} else {
-				applyFriction(sv_player.accel, sv_friction);
+				applyFriction(sv_player.vel, sv_friction);
 			}
 
 			fl::vec3 step = {sv_player.vel.x * (float)delta_time, sv_player.vel.y * (float)delta_time, sv_player.vel.z * (float)delta_time};
-
-			if (sv_player.airborn == false && sv_player.sliding == false) {
-				sv_player.vel = {0};
-			}
 
 			if (sv_player.pos.y <= 0 && step.y <= 0) {
 				step.y = 0;

@@ -1,8 +1,8 @@
 #include "../include/engine.hh"
 
 void
-applyFriction(fl::vec3 &acceleration, float frictionFactor) {
-    acceleration = fl::vec3mulValue(acceleration, (1.0f - frictionFactor));
+applyFriction(fl::vec3 &velocity, float frictionFactor) {
+    velocity = fl::vec3mulValue(velocity, (1.0f - frictionFactor));
 }
 
 void
