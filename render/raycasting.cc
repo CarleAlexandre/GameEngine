@@ -8,7 +8,7 @@ getPixelRay(Vector2 pos, Camera camera, display_t display) {
 
 	Vector4 clipCoords;
 	clipCoords = {(2.0f * pos.x) / display.width - 1.0f, 1.0f - (2.0f * pos.y) / display.height, -1.0f, 1.0f};
-	
+
 	return (ray);
 }
 

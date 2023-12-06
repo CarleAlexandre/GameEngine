@@ -78,3 +78,52 @@ void UnloadRenderTextureDepthTex(RenderTexture2D target)
         rlUnloadFramebuffer(target.id);
     }
 }
+
+void initRender(engine_t &engine, display_t &display) {
+	engine.gbuffer = {};
+	engine.shader = LoadShader("assets/shader/shader.vs", "assets/shader/shader.fs");
+	engine.shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(engine.shader, "viewPos");
+	float shaderposlocaltmp[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+    SetShaderValue(engine.shader, GetShaderLocation(engine.shader, "ambient"), shaderposlocaltmp, SHADER_UNIFORM_VEC4);
+
+	engine.fbo_shader = LoadShader(0, "assets/shader/depth_filter.fs");
+
+	engine.fbo = LoadRenderTextureDepthTex(display.width, display.height);
+    SetTextureFilter(engine.fbo.texture, TEXTURE_FILTER_BILINEAR);
+}
+
+void renderUpdate(engine_t &engine, display_t &display, Camera *camera, double delta_time) {
+	SetShaderValue(engine.shader, engine.shader.locs[SHADER_LOC_VECTOR_VIEW], &camera->position, SHADER_UNIFORM_VEC3);
+	SetShaderValue(engine.fbo_shader, engine.fbo_shader.locs[SHADER_LOC_VECTOR_VIEW], &camera->position, SHADER_UNIFORM_VEC3);
+}
+
+void renderAth(void) {
+	DrawRectangle(0, 0, 100, 100, BLACK);
+	DrawLine(50, 0, 50, 100, BLUE);
+	DrawLine(0, 50, 100, 50, RED);
+}
+
+void renderRender(engine_t &engine, display_t &display, Camera *camera, double delta_time, Voxel *voxel_dirt) {
+	BeginTextureMode(engine.fbo);
+		ClearBackground(BLACK);
+		rlEnableDepthTest();
+		BeginMode3D(*camera);
+			for (float i = 0; i < 10; i += 1) {
+				for (float j = 0; j < 10; j += 1) {
+					DrawVoxel(voxel_dirt->model, {i, -0.5f, j}, 1, RED);
+				}
+			}
+			DrawLine3D({-100, 0,}, {100, 0, 0}, RED);
+			DrawLine3D({0,-100,0}, {0, 100, 0}, GREEN);
+			DrawLine3D({0,0,-100}, {0, 0, 100}, BLUE);
+		EndMode3D();
+	EndTextureMode();
+
+	BeginShaderMode(engine.fbo_shader);
+		DrawTextureRec(engine.fbo.depth, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
+	EndShaderMode();
+	//BeginBlendMode(BLEND_ADDITIVE);
+	//	DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
+	//EndBlendMode();
+	renderAth();
+}

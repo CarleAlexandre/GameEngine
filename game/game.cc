@@ -25,23 +25,97 @@ unloadAllButton(fl::vec<Button> *button_menu, fl::vec<Button> *button_setting, f
 	}
 }
 
-sv_player_t initPlayer() {
+sv_player_t
+initPlayer() {
 	sv_player_t sv_player;
-
 	sv_player = {};
 	sv_player.mass = 10;
 	sv_player.pos = { 0.0f, 1.0f, 2.0f };
 	sv_player.vel = {0.0f, 0.0f, 0.0f};
 	sv_player.airborn = false;
-	sv_player.jumpforce = 30;
+	sv_player.jumpforce = 6.0f;
 	sv_player.speed = 100;
 	return (sv_player);
 }
 
-Quaternion rotateYawPitch(Vector3 axis, float angleYaw, float anglePitch) {
-    Quaternion qYaw = QuaternionFromAxisAngle((Vector3){0, 1, 0}, angleYaw);
-    Quaternion qPitch = QuaternionFromAxisAngle(axis, anglePitch);
-    return QuaternionMultiply(qPitch, qYaw);
+# define TIME_TO_JUMP 0.13f
+
+sv_physic_t
+initPhysic() {
+	sv_physic_t sv_physic;
+
+	sv_physic.friction = 0.3;
+	sv_physic.airborn_friction = 0.1;
+	sv_physic.restitution = 10;
+	sv_physic.gravity = {0, -2.0f, 0};
+	sv_physic.sensibility = 0.3f;
+	return (sv_physic);
+}
+
+
+void
+playerUpdateFps(display_t display, sv_player_t &sv_player, Camera *camera, sv_physic_t sv_physic, double delta_time) {
+	Vector2 mouse_delta = GetMouseDelta();
+	static double sv_jump_timing = 0;
+	SetMousePosition(display.width * 0.5, display.height * 0.5);
+	sv_player.forward = fl::tovec3(GetCameraForward(camera));
+	sv_player.right = fl::tovec3(GetCameraRight(camera));
+	if (IsKeyDown(KEY_W)) {
+		addImpulse(sv_player.accel, sv_player.forward, sv_player.mass, sv_player.speed);
+	}
+	if (IsKeyDown(KEY_S)) {
+		addImpulse(sv_player.accel, fl::vec3neg(sv_player.forward), sv_player.mass, sv_player.speed);
+	}
+	if (IsKeyDown(KEY_D)) {
+		addImpulse(sv_player.accel, sv_player.right, sv_player.mass, sv_player.speed);
+	}
+	if (IsKeyDown(KEY_A)) {
+		addImpulse(sv_player.accel, fl::vec3neg(sv_player.right), sv_player.mass, sv_player.speed);
+	}
+	if (IsKeyPressed(KEY_SPACE) && sv_player.pos.y <= 2) {
+		sv_player.jumping = true;
+	}
+	if (IsKeyDown(KEY_C)) {
+		if (sv_player.pos.y <= 0.1 && sv_player.airborn) {
+			addImpulse(sv_player.accel, {sv_player.forward.x * 3, 0, sv_player.forward.z * 3}, sv_player.mass, sv_player.speed);
+		}
+		sv_player.sliding = true;
+	} else if (sv_player.sliding == true) {
+		sv_player.sliding = false;
+	}
+	if (sv_player.pos.y > 1) {
+		sv_player.airborn = true;
+	} else {
+		sv_player.airborn = false;
+	}
+	if (sv_player.jumping == true && sv_jump_timing < TIME_TO_JUMP) {
+		addImpulse(sv_player.accel, {0.0f, (-sv_physic.gravity.y + sv_player.jumpforce), 0.0f}, sv_player.mass, sv_player.speed);
+		sv_jump_timing += delta_time;
+	}
+	if (sv_jump_timing >= TIME_TO_JUMP) {
+		sv_jump_timing = 0;
+		sv_player.jumping = false;
+	}
+	applyGravity(sv_player.accel, sv_physic.gravity, sv_player.mass);
+	sv_player.vel = resolveAccel(sv_player.vel, sv_player.accel, sv_player.mass, delta_time);
+	if (sv_player.airborn == true || sv_player.sliding == true) {
+		applyFriction(sv_player.vel, sv_physic.airborn_friction);
+	} else {
+		applyFriction(sv_player.vel, sv_physic.friction);
+	}
+	fl::vec3 step = {sv_player.vel.x * (float)delta_time, sv_player.vel.y * (float)delta_time, sv_player.vel.z * (float)delta_time};
+	if (sv_player.pos.y <= 0 && step.y < 0) {
+		step.y = 0;
+	}
+	sv_player.pos = fl::vec3add(sv_player.pos, step);
+	camera->target = Vector3Add(camera->target, fl::vec3to(step));
+	if (sv_player.sliding == true) {
+		camera->position = {sv_player.pos.x, sv_player.pos.y + 0.5f, sv_player.pos.z};
+	} else {
+		camera->position = {sv_player.pos.x, sv_player.pos.y + 1, sv_player.pos.z};
+	}
+	camera->target = fl::vec3to(fl::rotateYaw(fl::tovec3(camera->target), sv_player.pos, mouse_delta.x * sv_physic.sensibility * DEG2RAD));
+	CameraPitch(camera, -mouse_delta.y * sv_physic.sensibility * DEG2RAD, true, false, false);
 }
 
 int
@@ -52,12 +126,7 @@ main(void) {
 	//mv_player mplayer[16];
 	fl::vec<Button> button_menu;
 	bool window_close = false;
-
-	float sv_friction = 0.6;
-	float sv_airborn_friction = 0.02;
-	float sv_restitution = 10;
-	fl::vec3 sv_gravity = {0, -0.2f, 0};
-	float sv_sensibility = 0.3f;
+	sv_physic_t sv_physic;
 
 	engine.status = st_menu;
 	display.width = 720;
@@ -71,6 +140,7 @@ main(void) {
 	display.icon = LoadImage("assets/icon.png");
 	SetWindowIcon(display.icon);
 	sv_player = initPlayer();
+	sv_physic = initPhysic();
 
     Camera camera = { 0 };
     camera.position = (Vector3){ 0.0f, 1.0f, 0.0f };
@@ -79,18 +149,10 @@ main(void) {
     camera.fovy = 60.0f;
     camera.projection = CAMERA_PERSPECTIVE;
 
-	engine.shader = LoadShader("assets/shader/shader.vs", "assets/shader/shader.fs");
-	engine.shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(engine.shader, "viewPos");
-	float shaderposlocaltmp[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    SetShaderValue(engine.shader, GetShaderLocation(engine.shader, "ambient"), shaderposlocaltmp, SHADER_UNIFORM_VEC4);
-
-	engine.fbo_shader = LoadShader(0, "assets/shader/sobel_filter.fs");
+	initRender(engine, display);
 
 	Light light = CreateLight(LIGHT_POINT, {10, 10, 15}, Vector3Zero(), WHITE, engine.shader);
-
 	Voxel *voxel_dirt = loadVoxel(engine.shader);
-	engine.fbo = LoadRenderTextureDepthTex(display.width, display.height);
-    SetTextureFilter(engine.fbo.texture, TEXTURE_FILTER_BILINEAR);
 
 # ifdef DEBUG_CONSOLE_USE
 	initConsole();
@@ -127,112 +189,30 @@ main(void) {
 		}
 # endif
 		if (engine.status & st_game) {
-			Vector2 mouse_delta = GetMouseDelta();
-			SetMousePosition(display.width * 0.5, display.height * 0.5);
-
-			sv_player.forward = fl::tovec3(GetCameraForward(&camera));
-			sv_player.right = fl::tovec3(GetCameraRight(&camera));
-
-			if (IsKeyDown(KEY_W)) {
-				addImpulse(sv_player.accel, sv_player.forward, sv_player.mass, sv_player.speed);
-			}
-			if (IsKeyDown(KEY_S)) {
-				addImpulse(sv_player.accel, fl::vec3neg(sv_player.forward), sv_player.mass, sv_player.speed);
-			}
-			if (IsKeyDown(KEY_D)) {
-				addImpulse(sv_player.accel, sv_player.right, sv_player.mass, sv_player.speed);
-			}
-			if (IsKeyDown(KEY_A)) {
-				addImpulse(sv_player.accel, fl::vec3neg(sv_player.right), sv_player.mass, sv_player.speed);
-			}
-			if (IsKeyPressed(KEY_SPACE) && sv_player.pos.y <= 1) {
-				addImpulse(sv_player.accel, {0.0f, sv_player.jumpforce, 0.0f}, sv_player.mass, sv_player.speed);
-				sv_player.airborn = true;
-			}
-			if (IsKeyDown(KEY_C)) {
-				if (sv_player.pos.y <= 0.1 && sv_player.airborn) {
-					addImpulse(sv_player.accel, {sv_player.forward.x * 3, 0, sv_player.forward.z * 3}, sv_player.mass, sv_player.speed);
-				}
-				sv_player.sliding = true;
-			} else if (sv_player.sliding == true) {
-				sv_player.sliding = false;
-			}
-
-			applyGravity(sv_player.accel, sv_gravity, sv_player.mass);
-			sv_player.vel = resolveAccel(sv_player.vel, sv_player.accel, sv_player.mass, delta_time);
-			if (sv_player.airborn == true || sv_player.sliding == true) {
-				applyFriction(sv_player.vel, sv_airborn_friction);
-			} else {
-				applyFriction(sv_player.vel, sv_friction);
-			}
-
-			fl::vec3 step = {sv_player.vel.x * (float)delta_time, sv_player.vel.y * (float)delta_time, sv_player.vel.z * (float)delta_time};
-
-			if (sv_player.pos.y <= 0 && step.y <= 0) {
-				step.y = 0;
-				sv_player.airborn = false;
-			}
-
-			sv_player.pos = fl::vec3add(sv_player.pos, step);
-			camera.target = Vector3Add(camera.target, fl::vec3to(step));
-			camera.position = fl::vec3to(sv_player.pos);
-
-			camera.target = fl::vec3to(fl::rotateYaw(fl::tovec3(camera.target), sv_player.pos, mouse_delta.x * sv_sensibility * DEG2RAD));
-			CameraPitch(&camera, -mouse_delta.y * sv_sensibility * DEG2RAD, true, false, false);
-
+			playerUpdateFps(display, sv_player, &camera, sv_physic, delta_time);
 			UpdateLightValues(engine.shader, light);
-			SetShaderValue(engine.shader, engine.shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position, SHADER_UNIFORM_VEC3);
-			SetShaderValue(engine.fbo_shader, engine.fbo_shader.locs[SHADER_LOC_VECTOR_VIEW], &camera.position, SHADER_UNIFORM_VEC3);
-
-			BeginTextureMode(engine.fbo);
-				ClearBackground(WHITE);
-				rlEnableDepthTest();
-				BeginMode3D(camera);
-					for (float i = 0; i < 10; i+=1) {
-						for (float j = 0; j < 10; j+=1) {
-							DrawVoxel(voxel_dirt->model, {i, 0, j}, 1, RED);
-						}
-					}
-					for (float i = -1; i > -11; i-=1) {
-						for (float j = 0; j > -10; j-=1) {
-							DrawVoxel(voxel_dirt->model, {i, 0, j}, 1, BLUE);
-						}
-					}
-					DrawLine3D({-100, 0,}, {100, 0, 0}, RED);
-					DrawLine3D({0,-100,0}, {0, 100, 0}, GREEN);
-					DrawLine3D({0,0,-100}, {0, 0, 100}, BLUE);
-					DrawLine3D(camera.position, camera.target, PINK);
-				EndMode3D();
-			EndTextureMode();
+			renderUpdate(engine, display, &camera, delta_time);
 		}
+		BeginDrawing();
 			ClearBackground(BLACK);
-			if (engine.status & st_game) {
-				//BeginShaderMode(engine.fbo_shader);
-					DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
-				//EndShaderMode();
-				//BeginBlendMode(BLEND_ADDITIVE);
-				//	DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
-				//EndBlendMode();
-				DrawRectangle(0, 0, 100, 100, BLACK);
-				DrawLine(50, 0, 50, 100, BLUE);
-				DrawLine(0, 50, 100, 50, RED);
-				DrawLine(50, 50, sv_player.vel.x + 50, sv_player.vel.z + 50, WHITE);
-			}
+		if (engine.status & st_game) {
+			renderRender(engine, display, &camera, delta_time, voxel_dirt);
+		}
 # ifdef DEBUG_CONSOLE_USE
-			if (engine.status & st_debug) {
-				console_render(delta_time, &display);
-			}
+		if (engine.status & st_debug) {
+			console_render(delta_time, &display);
+		}
 # endif
-			if (engine.status & st_menu) {
-				render_button(button_menu, engine.font, engine.textures, mouse_pos);
-			}
-			if (window_close == true) {
-				DrawRectangle(10, display.height * 0.5 - 100, display.width, 200, BLACK);
-				DrawTextEx(engine.font, "Are you sure you want to exit program? [Y/N]", (Vector2){50, static_cast<float>(display.height * 0.5 - 20)}, 24, 0, GREEN);
-
-			}
+		if (engine.status & st_menu) {
+			render_button(button_menu, engine.font, engine.textures, mouse_pos);
+		}
+		if (window_close == true) {
+			DrawRectangle(10, display.height * 0.5 - 100, display.width, 200, BLACK);
+			DrawTextEx(engine.font, "Are you sure you want to exit program? [Y/N]", (Vector2){50, static_cast<float>(display.height * 0.5 - 20)}, 24, 0, GREEN);
+		}
 		EndDrawing();
 	}
+
 	CloseWindow();
 	UnloadRenderTextureDepthTex(engine.fbo);
 	UnloadShader(engine.shader);

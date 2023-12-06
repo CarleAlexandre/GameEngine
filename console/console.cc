@@ -5,7 +5,16 @@
 #  define MAX_CMD 7
 
 namespace {
-	constexpr char *cmd_list[MAX_CMD] = {
+	typedef struct debug_console {
+		std::string current_buffer;
+		bool is_enter;
+		int stats;
+		fl::vec<std::string> error;
+		fl::vec<std::string> lines;
+	}	t_debug_console;
+
+
+	const char *cmd_list[MAX_CMD] = {
 		"move",
 		"delete",
 		"add",
@@ -15,7 +24,7 @@ namespace {
 		"close"
 	};
 
-	constexpr char *struct_type_list[5] = {
+	const char *struct_type_list[5] = {
 		"world_element",
 		"world_bit",
 		"entity_spawn",
@@ -23,43 +32,36 @@ namespace {
 		"item"
 	};
 
+	enum dbc_stats{
+		error = 1,
+		none = 0,
+	}	stats_enum;
+
+	enum dbc_token {
+		cmd = 0,
+		arg = 1,
+		input = 2,
+		element = 3,
+		coord = 4,
+	}	token_enum;
+
+	typedef struct lexer_s {
+		std::string str;
+		int idx;
+	}	lexer_t;
+
+	typedef struct cmd_s {
+		std::string cmd;
+		fl::vec<std::string> arg;
+		fl::vec<dbc_token> token;
+	} cmd_t;
+
 	t_debug_console dbc;
 	int current_index = 0;
 	char blinker = '_';
 	double time_accu = 0;
+
 };
-
-enum dbc_stats{
-	error = 1,
-	none = 0,
-}	stats_enum;
-
-enum dbc_token {
-	cmd = 0,
-	arg = 1,
-	input = 2,
-	element = 3,
-	coord = 4,
-}	token_enum;
-
-struct lexer_s {
-	std::string str;
-	int idx;
-}	lexer_t;
-
-struct cmd_s {
-	std::string cmd;
-	std::vector<std::string> arg;
-	std::vector<token_enum> token;
-} cmd_t;
-
-struct debug_console {
-	std::string current_buffer;
-	bool is_enter;
-	int stats;
-	std::vector<std::string> error;
-	std::vector<std::string> lines;
-}	t_debug_console;
 
 void
 initConsole(void) {
@@ -75,7 +77,6 @@ add_error_dbc(int i) {
 inline int
 get_arg_dbc_add(const std::string &str) {
 	size_t index = 0;
-
 	while (strncmp(str.c_str(), struct_type_list[index], str.size()) != 0 && index < 5) {
 		index++;
 	}
@@ -88,10 +89,9 @@ character_is_ok(int c) {
 }
 
 inline int
-lexer(std::vector<lexer_t> &lexer_info) {
-	size_t	i = 0;
-	lexer_t	tmp_token;
-	
+lexer(fl::vec<lexer_t> &lexer_info) {
+	size_t i = 0;
+	lexer_t tmp_token;
 	tmp_token.idx = 0;
 	while (i < dbc.current_buffer.length()) {
 		if (!character_is_ok(dbc.current_buffer[i])) {
@@ -111,8 +111,8 @@ lexer(std::vector<lexer_t> &lexer_info) {
 }
 
 inline int
-parser(std::vector<lexer_t> lexer_info, cmd_t *cmd) {
-	if (!lexer_info.empty()) {
+parser(fl::vec<lexer_t> lexer_info, cmd_t *cmd) {
+	if (lexer_info.size()) {
 		cmd->cmd = lexer_info[0].str.c_str();
 		for (size_t i = 1; i < lexer_info.size(); i++) {
 			cmd->arg.push_back(lexer_info[i].str.c_str());
@@ -151,7 +151,7 @@ execute(cmd_t cmd, int *status) {
 //			dbc_rotate();
 			break;
 		case (6): {
-			if (!dbc.lines.empty()) {
+			if (dbc.lines.size()) {
 				dbc.lines.clear();
 			}
 			break;
@@ -169,7 +169,6 @@ execute(cmd_t cmd, int *status) {
 
 void
 console_render(double delta_time, const display_t *display) {
-	
 	time_accu += delta_time;
 	if (time_accu >= 0.5) {
 		if (blinker == '_') {
@@ -192,9 +191,8 @@ console_render(double delta_time, const display_t *display) {
 
 int
 console_logic(double delta_time, engine_t *engine) {
-	std::vector<lexer_t>	lexer_info;
-	cmd_t					cmd;
-
+	fl::vec<lexer_t> lexer_info;
+	cmd_t cmd;
 	if (dbc.is_enter == false) {
 		int key = GetCharPressed();
 		while (key > 0) {
@@ -241,4 +239,5 @@ console_logic(double delta_time, engine_t *engine) {
 	}
 	return (0);
 }
+
 #endif
