@@ -97,10 +97,12 @@ void renderUpdate(engine_t &engine, display_t &display, Camera *camera, double d
 	SetShaderValue(engine.fbo_shader, engine.fbo_shader.locs[SHADER_LOC_VECTOR_VIEW], &camera->position, SHADER_UNIFORM_VEC3);
 }
 
-void renderAth(void) {
+void renderAth(display_t display) {
 	DrawRectangle(0, 0, 100, 100, BLACK);
 	DrawLine(50, 0, 50, 100, BLUE);
 	DrawLine(0, 50, 100, 50, RED);
+	DrawLine(display.width * 0.5, display.height * 0.5 - 10, display.width * 0.5, display.height * 0.5 + 10, BLACK);
+	DrawLine(display.width * 0.5 - 10, display.height * 0.5, display.width * 0.5 + 10, display.height * 0.5, BLACK);
 }
 
 void renderRender(engine_t &engine, display_t &display, Camera *camera, double delta_time, Voxel *voxel_dirt) {
@@ -125,5 +127,5 @@ void renderRender(engine_t &engine, display_t &display, Camera *camera, double d
 	//BeginBlendMode(BLEND_ADDITIVE);
 	//	DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
 	//EndBlendMode();
-	renderAth();
+	renderAth(display);
 }

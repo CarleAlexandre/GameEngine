@@ -52,69 +52,85 @@ initPhysic() {
 	return (sv_physic);
 }
 
-
 void
-playerUpdateFps(display_t display, sv_player_t &sv_player, Camera *camera, sv_physic_t sv_physic, double delta_time) {
+playerUpdateFps(display_t display, sv_player_t *sv_player, Camera *camera, sv_physic_t sv_physic, double delta_time) {
 	Vector2 mouse_delta = GetMouseDelta();
 	static double sv_jump_timing = 0;
 	SetMousePosition(display.width * 0.5, display.height * 0.5);
-	sv_player.forward = fl::tovec3(GetCameraForward(camera));
-	sv_player.right = fl::tovec3(GetCameraRight(camera));
+	sv_player->forward = fl::tovec3(GetCameraForward(camera));
+	sv_player->right = fl::tovec3(GetCameraRight(camera));
 	if (IsKeyDown(KEY_W)) {
-		addImpulse(sv_player.accel, sv_player.forward, sv_player.mass, sv_player.speed);
+		if (sv_player->sliding) {
+			addImpulse(sv_player->accel, sv_player->forward, sv_player->mass, sv_player->speed * 0.3);
+		} else {
+			addImpulse(sv_player->accel, sv_player->forward, sv_player->mass, sv_player->speed);
+		}
 	}
 	if (IsKeyDown(KEY_S)) {
-		addImpulse(sv_player.accel, fl::vec3neg(sv_player.forward), sv_player.mass, sv_player.speed);
+		if (sv_player->sliding) {
+			addImpulse(sv_player->accel, fl::vec3neg(sv_player->forward), sv_player->mass, sv_player->speed * 0.3);
+		} else {
+			addImpulse(sv_player->accel, fl::vec3neg(sv_player->forward), sv_player->mass, sv_player->speed);
+		}
 	}
 	if (IsKeyDown(KEY_D)) {
-		addImpulse(sv_player.accel, sv_player.right, sv_player.mass, sv_player.speed);
+		if (sv_player->sliding) {
+			addImpulse(sv_player->accel, sv_player->right, sv_player->mass, sv_player->speed * 0.3);
+		} else {
+			addImpulse(sv_player->accel, sv_player->right, sv_player->mass, sv_player->speed);
+		}
 	}
 	if (IsKeyDown(KEY_A)) {
-		addImpulse(sv_player.accel, fl::vec3neg(sv_player.right), sv_player.mass, sv_player.speed);
-	}
-	if (IsKeyPressed(KEY_SPACE) && sv_player.pos.y <= 2) {
-		sv_player.jumping = true;
-	}
-	if (IsKeyDown(KEY_C)) {
-		if (sv_player.pos.y <= 0.1 && sv_player.airborn) {
-			addImpulse(sv_player.accel, {sv_player.forward.x * 3, 0, sv_player.forward.z * 3}, sv_player.mass, sv_player.speed);
+		if (sv_player->sliding) {
+			addImpulse(sv_player->accel, fl::vec3neg(sv_player->right), sv_player->mass, sv_player->speed * 0.3);
+		} else {
+			addImpulse(sv_player->accel, fl::vec3neg(sv_player->right), sv_player->mass, sv_player->speed);
 		}
-		sv_player.sliding = true;
-	} else if (sv_player.sliding == true) {
-		sv_player.sliding = false;
 	}
-	if (sv_player.pos.y > 1) {
-		sv_player.airborn = true;
+	if (IsKeyPressed(KEY_SPACE) && sv_player->pos.y <= 2) {
+		sv_player->jumping = true;
+	}
+	if (IsKeyPressed(KEY_C)) {
+		addImpulse(sv_player->accel, {sv_player->forward.x * 3, 0, sv_player->forward.z * 3}, sv_player->mass, sv_player->speed * 4);
+		sv_player->sliding = true;
+		camera->target.y -= 0.5f;
+	}
+	if (IsKeyReleased(KEY_C)) {
+		sv_player->sliding = false;
+		camera->target.y += 0.5f;
+	}
+	if (sv_player->pos.y > 1) {
+		sv_player->airborn = true;
 	} else {
-		sv_player.airborn = false;
+		sv_player->airborn = false;
 	}
-	if (sv_player.jumping == true && sv_jump_timing < TIME_TO_JUMP) {
-		addImpulse(sv_player.accel, {0.0f, (-sv_physic.gravity.y + sv_player.jumpforce), 0.0f}, sv_player.mass, sv_player.speed);
+	if (sv_player->jumping == true && sv_jump_timing < TIME_TO_JUMP) {
+		addImpulse(sv_player->accel, {0.0f, (-sv_physic.gravity.y + sv_player->jumpforce), 0.0f}, sv_player->mass, sv_player->speed);
 		sv_jump_timing += delta_time;
 	}
 	if (sv_jump_timing >= TIME_TO_JUMP) {
 		sv_jump_timing = 0;
-		sv_player.jumping = false;
+		sv_player->jumping = false;
 	}
-	applyGravity(sv_player.accel, sv_physic.gravity, sv_player.mass);
-	sv_player.vel = resolveAccel(sv_player.vel, sv_player.accel, sv_player.mass, delta_time);
-	if (sv_player.airborn == true || sv_player.sliding == true) {
-		applyFriction(sv_player.vel, sv_physic.airborn_friction);
+	applyGravity(sv_player->accel, sv_physic.gravity, sv_player->mass);
+	sv_player->vel = resolveAccel(sv_player->vel, sv_player->accel, sv_player->mass, delta_time);
+	if (sv_player->airborn == true || sv_player->sliding == true) {
+		applyFriction(sv_player->vel, sv_physic.airborn_friction);
 	} else {
-		applyFriction(sv_player.vel, sv_physic.friction);
+		applyFriction(sv_player->vel, sv_physic.friction);
 	}
-	fl::vec3 step = {sv_player.vel.x * (float)delta_time, sv_player.vel.y * (float)delta_time, sv_player.vel.z * (float)delta_time};
-	if (sv_player.pos.y <= 0 && step.y < 0) {
+	fl::vec3 step = {sv_player->vel.x * (float)delta_time, sv_player->vel.y * (float)delta_time, sv_player->vel.z * (float)delta_time};
+	if (sv_player->pos.y <= 0 && step.y < 0) {
 		step.y = 0;
 	}
-	sv_player.pos = fl::vec3add(sv_player.pos, step);
+	sv_player->pos = fl::vec3add(sv_player->pos, step);
 	camera->target = Vector3Add(camera->target, fl::vec3to(step));
-	if (sv_player.sliding == true) {
-		camera->position = {sv_player.pos.x, sv_player.pos.y + 0.5f, sv_player.pos.z};
+	if (sv_player->sliding) {
+		camera->position = {sv_player->pos.x, sv_player->pos.y + 0.5f, sv_player->pos.z};
 	} else {
-		camera->position = {sv_player.pos.x, sv_player.pos.y + 1, sv_player.pos.z};
+		camera->position = {sv_player->pos.x, sv_player->pos.y + 1, sv_player->pos.z};
 	}
-	camera->target = fl::vec3to(fl::rotateYaw(fl::tovec3(camera->target), sv_player.pos, mouse_delta.x * sv_physic.sensibility * DEG2RAD));
+	camera->target = fl::vec3to(fl::rotateYaw(fl::tovec3(camera->target), sv_player->pos, mouse_delta.x * sv_physic.sensibility * DEG2RAD));
 	CameraPitch(camera, -mouse_delta.y * sv_physic.sensibility * DEG2RAD, true, false, false);
 }
 
@@ -189,7 +205,7 @@ main(void) {
 		}
 # endif
 		if (engine.status & st_game) {
-			playerUpdateFps(display, sv_player, &camera, sv_physic, delta_time);
+			playerUpdateFps(display, &sv_player, &camera, sv_physic, delta_time);
 			UpdateLightValues(engine.shader, light);
 			renderUpdate(engine, display, &camera, delta_time);
 		}
