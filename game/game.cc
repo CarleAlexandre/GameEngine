@@ -58,7 +58,11 @@ playerUpdateFps(display_t display, sv_player_t *sv_player, Camera *camera, sv_ph
 	static double sv_jump_timing = 0;
 	SetMousePosition(display.width * 0.5, display.height * 0.5);
 	sv_player->forward = fl::tovec3(GetCameraForward(camera));
+	sv_player->forward.y = 0;
+	sv_player->forward = fl::vec3norm(sv_player->forward);
 	sv_player->right = fl::tovec3(GetCameraRight(camera));
+	sv_player->right.y = 0;
+	sv_player->right = fl::vec3norm(sv_player->right);
 	if (IsKeyDown(KEY_W)) {
 		if (sv_player->sliding) {
 			addImpulse(sv_player->accel, sv_player->forward, sv_player->mass, sv_player->speed * 0.3);
@@ -91,7 +95,7 @@ playerUpdateFps(display_t display, sv_player_t *sv_player, Camera *camera, sv_ph
 		sv_player->jumping = true;
 	}
 	if (IsKeyPressed(KEY_C)) {
-		addImpulse(sv_player->accel, {sv_player->forward.x * 3, 0, sv_player->forward.z * 3}, sv_player->mass, sv_player->speed * 4);
+		addImpulse(sv_player->accel, {sv_player->forward.x * 5, 0, sv_player->forward.z * 5}, sv_player->mass, sv_player->speed * 4);
 		sv_player->sliding = true;
 		camera->target.y -= 0.5f;
 	}
@@ -99,10 +103,11 @@ playerUpdateFps(display_t display, sv_player_t *sv_player, Camera *camera, sv_ph
 		sv_player->sliding = false;
 		camera->target.y += 0.5f;
 	}
-	if (sv_player->pos.y > 1) {
+	if (sv_player->pos.y > 0.01) {
 		sv_player->airborn = true;
-	} else {
+	} else if (sv_player->airborn){
 		sv_player->airborn = false;
+		addImpulse(sv_player->accel, {sv_player->forward.x * 5, 0, sv_player->forward.z * 5}, sv_player->mass, sv_player->speed * 4);
 	}
 	if (sv_player->jumping == true && sv_jump_timing < TIME_TO_JUMP) {
 		addImpulse(sv_player->accel, {0.0f, (-sv_physic.gravity.y + sv_player->jumpforce), 0.0f}, sv_player->mass, sv_player->speed);
@@ -212,7 +217,7 @@ main(void) {
 		BeginDrawing();
 			ClearBackground(BLACK);
 		if (engine.status & st_game) {
-			renderRender(engine, display, &camera, delta_time, voxel_dirt);
+			renderRender(engine, display, &camera, delta_time, voxel_dirt, sv_player);
 		}
 # ifdef DEBUG_CONSOLE_USE
 		if (engine.status & st_debug) {

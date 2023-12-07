@@ -202,7 +202,7 @@ void applyGravity(fl::vec3 &acceleration, const fl::vec3 &gravity, float mass);
 
 void initRender(engine_t &engine, display_t &display);
 void renderUpdate(engine_t &engine, display_t &display, Camera *camera, double delta_time);
-void renderRender(engine_t &engine, display_t &display, Camera *camera, double delta_time, Voxel *voxel_dirt);
+void renderRender(engine_t &engine, display_t &display, Camera *camera, double delta_time, Voxel *voxel_dirt, sv_player_t sv_player);
 
 //test under
 RenderTexture2D LoadRenderTextureDepthTex(int width, int height);

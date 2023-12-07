@@ -86,7 +86,7 @@ void initRender(engine_t &engine, display_t &display) {
 	float shaderposlocaltmp[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
     SetShaderValue(engine.shader, GetShaderLocation(engine.shader, "ambient"), shaderposlocaltmp, SHADER_UNIFORM_VEC4);
 
-	engine.fbo_shader = LoadShader(0, "assets/shader/depth_filter.fs");
+	engine.fbo_shader = LoadShader(0, "assets/shader/sobel_filter.fs");
 
 	engine.fbo = LoadRenderTextureDepthTex(display.width, display.height);
     SetTextureFilter(engine.fbo.texture, TEXTURE_FILTER_BILINEAR);
@@ -97,15 +97,16 @@ void renderUpdate(engine_t &engine, display_t &display, Camera *camera, double d
 	SetShaderValue(engine.fbo_shader, engine.fbo_shader.locs[SHADER_LOC_VECTOR_VIEW], &camera->position, SHADER_UNIFORM_VEC3);
 }
 
-void renderAth(display_t display) {
+void renderAth(display_t display, sv_player_t sv_player) {
 	DrawRectangle(0, 0, 100, 100, BLACK);
 	DrawLine(50, 0, 50, 100, BLUE);
-	DrawLine(0, 50, 100, 50, RED);
+	DrawLine(0, 50, 100, 50, BLUE);
+	DrawLine(50, 50, sv_player.vel.x * 2 + 50, sv_player.vel.z * 2 + 50, RED);
 	DrawLine(display.width * 0.5, display.height * 0.5 - 10, display.width * 0.5, display.height * 0.5 + 10, BLACK);
 	DrawLine(display.width * 0.5 - 10, display.height * 0.5, display.width * 0.5 + 10, display.height * 0.5, BLACK);
 }
 
-void renderRender(engine_t &engine, display_t &display, Camera *camera, double delta_time, Voxel *voxel_dirt) {
+void renderRender(engine_t &engine, display_t &display, Camera *camera, double delta_time, Voxel *voxel_dirt, sv_player_t sv_player) {
 	BeginTextureMode(engine.fbo);
 		ClearBackground(BLACK);
 		rlEnableDepthTest();
@@ -122,10 +123,10 @@ void renderRender(engine_t &engine, display_t &display, Camera *camera, double d
 	EndTextureMode();
 
 	BeginShaderMode(engine.fbo_shader);
-		DrawTextureRec(engine.fbo.depth, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
+		DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
 	EndShaderMode();
-	//BeginBlendMode(BLEND_ADDITIVE);
-	//	DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
-	//EndBlendMode();
-	renderAth(display);
+	BeginBlendMode(BLEND_ADDITIVE);
+		DrawTextureRec(engine.fbo.texture, {0, 0, static_cast<float>(display.width), -static_cast<float>(display.height)}, {0, 0}, WHITE);
+	EndBlendMode();
+	renderAth(display, sv_player);
 }
