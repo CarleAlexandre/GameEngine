@@ -1,13 +1,21 @@
 # THE GAME
 
-This is the c++ version of no heaven,
-for now i will focus on the actual gameplay and the mecanics not the graphics,
-as graphics is the easiest part
+the old note here was complete bullshit.
+
+for now i aim to create an action rpg first personne shooter, it's in voxel, like teardown or john lin's engine.
+it aim to have the same gameloop as a monster hunter, but you can create your own town.
+
+in multiplier, you have already a town implemented, and you can modifie it by buying some parcel.
+in this town, you have multiple activities, the normal gameplay loop, but also, you can create commerce, enterprise, a guild
+a pub, you can give quest to other player, join pvp quest, and go for boss fight with 1 to 16 player (more player = higher difficulty), and user created minigames or gamemode.
+
+the first gameplay and gameloop i want to introduce is a round based zombie survivial game in map that are very rich in lore (canon in the game universe).
 
 ___
 
-## TO DO
+## TO DO GAME DESIGN
 
+- ZOMBIE SURVIVAL MODE
 - MAP
 - CITY
 - LIFE SKILL
@@ -19,6 +27,8 @@ ___
 - INDUSTRIE
 - AUTOMATISME
 - CENTRALE MARKET AND GLOBAL ECONOMY
+- MODDING
+- more idea to come
 
 
 for item and texture atlas, it should be read and loaded after launch,
@@ -26,6 +36,33 @@ player could then add items and texture on the fly
 and map too;
 i should also do the serialization of file for the engine
 
+___
+
+## TO DO ENGINE WORK
+
+- collision detection
+- raycasting through octree
+- data compression and serialisation (1 block = 1 unsigned short (for the block id))
+- gbuffer and zbuffer
+- pushing the voxel scene into a rendering object
+- reworking camera system for the voxel renderer
+- adding raytracing for lighting effect and some particles
+- finishing to work on the ui / ATH
+- building the ide and level editor / model editor software
+- making a system to take high quality asset and convert them to voxel
+- optimizin data calculation through simd (partially done with fl::vec3_mm)
+- animation tooling and implementation
+- hot loading
+- thread / process
+- more idea to come
+___
+
+## TO DO FLLIB
+
+- finish octree data struct and algorythm for it.
+- add a physic calculation library for things like collision, fluid, gaz, solid and force.
+- threading library for semaphore, fence, thread, mutex management (using either pthread or equivalent for c++)
+- more idea to come
 ___
 
 ## NOTE

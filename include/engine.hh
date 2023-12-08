@@ -161,10 +161,14 @@ typedef struct s_LootTable {
 }	LootTable;
 
 typedef struct s_Voxel {
-	Mesh mesh;
-	Model model;
-	Shader shader;
+	unsigned short blockId;
 } Voxel;
+
+enum voxelType {
+	BLOCK_AIR,
+	BLOCK_DIRT,
+	BLOCK_WOOD,
+};
 
 # define DEBUG_CONSOLE_USE
 # ifdef DEBUG_CONSOLE_USE

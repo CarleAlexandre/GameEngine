@@ -113,7 +113,7 @@ void renderRender(engine_t &engine, display_t &display, Camera *camera, double d
 		BeginMode3D(*camera);
 			for (float i = 0; i < 10; i += 1) {
 				for (float j = 0; j < 10; j += 1) {
-					DrawVoxel(voxel_dirt->model, {i, -0.5f, j}, 1, RED);
+					DrawCubeWires({i, -0.5f, j}, 1, 1, 1, RED);
 				}
 			}
 			DrawLine3D({-100, 0,}, {100, 0, 0}, RED);
