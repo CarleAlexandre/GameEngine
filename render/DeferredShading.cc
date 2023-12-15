@@ -106,7 +106,7 @@ void renderAth(display_t display, sv_player_t sv_player) {
 	DrawLine(display.width * 0.5 - 10, display.height * 0.5, display.width * 0.5 + 10, display.height * 0.5, BLACK);
 }
 
-void renderRender(engine_t &engine, display_t &display, Camera *camera, double delta_time, Voxel *voxel_dirt, sv_player_t sv_player) {
+void renderRender(engine_t &engine, display_t &display, Camera *camera, double delta_time, sv_player_t sv_player) {
 	BeginTextureMode(engine.fbo);
 		ClearBackground(BLACK);
 		rlEnableDepthTest();

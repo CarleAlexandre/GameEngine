@@ -24,8 +24,6 @@
 
 # include <iostream>
 # include <fstream>
-# include <string.h>
-# include <string>
 # include "../../fllib/include/flvector.hh"
 # include "../../fllib/include/fllinear.hh"
 # include "../../fllib/include/floctree.hh"
@@ -194,8 +192,6 @@ void addFadingTxt(std::string text, double delay, Color color, int font_size, Ve
 void renderFadingTxt(double delta_time, fl::vec<s_FadeTxt> *Fadetxt_list);
 
 void DrawVoxel(Model voxel, Vector3 pos, float size, Color color);
-void unloadVoxel(Voxel *voxel);
-Voxel *loadVoxel(Shader voxel_shader);
 
 fl::vec3 resolveAccel(fl::vec3 &velocity, fl::vec3 &acceleration, float mass, float deltaTime);
 void addImpulse(fl::vec3 &acceleration, const fl::vec3 &impulse, float mass, float speed);
@@ -206,7 +202,7 @@ void applyGravity(fl::vec3 &acceleration, const fl::vec3 &gravity, float mass);
 
 void initRender(engine_t &engine, display_t &display);
 void renderUpdate(engine_t &engine, display_t &display, Camera *camera, double delta_time);
-void renderRender(engine_t &engine, display_t &display, Camera *camera, double delta_time, Voxel *voxel_dirt, sv_player_t sv_player);
+void renderRender(engine_t &engine, display_t &display, Camera *camera, double delta_time, sv_player_t sv_player);
 
 //test under
 RenderTexture2D LoadRenderTextureDepthTex(int width, int height);

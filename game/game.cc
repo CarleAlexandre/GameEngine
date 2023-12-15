@@ -173,7 +173,6 @@ main(void) {
 	initRender(engine, display);
 
 	Light light = CreateLight(LIGHT_POINT, {10, 10, 15}, Vector3Zero(), WHITE, engine.shader);
-	Voxel *voxel_dirt = loadVoxel(engine.shader);
 
 # ifdef DEBUG_CONSOLE_USE
 	initConsole();
@@ -217,7 +216,7 @@ main(void) {
 		BeginDrawing();
 			ClearBackground(BLACK);
 		if (engine.status & st_game) {
-			renderRender(engine, display, &camera, delta_time, voxel_dirt, sv_player);
+			renderRender(engine, display, &camera, delta_time, sv_player);
 		}
 # ifdef DEBUG_CONSOLE_USE
 		if (engine.status & st_debug) {
@@ -237,7 +236,6 @@ main(void) {
 	CloseWindow();
 	UnloadRenderTextureDepthTex(engine.fbo);
 	UnloadShader(engine.shader);
-	unloadVoxel(voxel_dirt);
 	free(display.title);
 	UnloadImage(display.icon);
 	UnloadTextureAtlas(engine.textures);
