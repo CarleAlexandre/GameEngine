@@ -6,7 +6,7 @@ BUILDDIR	=	build/
 
 CC			=	gcc
 
-CFLAGS		=	-Wall -Wextra -std=c++20 -O3
+CFLAGS		=	-Wall -Wextra -std=c++20 -O3 -g
 
 OBJ		=	$(SRC:%.cc=%.o)
 
