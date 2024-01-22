@@ -7,7 +7,7 @@ applyFriction(fl::vec3 &velocity, float frictionFactor) {
 
 void
 applyRestitution(fl::vec3 &velocity, float restitutionFactor) {
-    velocity = fl::vec3mulValue(velocity, -restitutionFactor);  // Invert the velocity and multiply by restitution
+    velocity = fl::vec3mulValue(velocity, -restitutionFactor);// Invert the velocity and multiply by restitution
 }
 
 void
